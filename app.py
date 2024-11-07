@@ -64,5 +64,11 @@ def get_formatted_entries():
     formatted_text = format_entries(entries)
     return jsonify({"formattedText": formatted_text})
 
+@app.route('/view-entries', methods=['GET'])
+def view_entries():
+    with open('entries.json', 'r') as f:
+        data = json.load(f)
+    return jsonify(data)
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
