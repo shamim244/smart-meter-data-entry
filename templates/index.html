@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meter Entry and Formatter</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f4f9; margin: 0; }
+        .container { max-width: 800px; width: 100%; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .container h2 { text-align: center; }
+        textarea, input[type="text"], input[type="date"] { width: 100%; padding: 10px; font-size: 16px; margin-top: 10px; border: 1px solid #ddd; border-radius: 4px; resize: none; }
+        button { width: 100%; padding: 10px; font-size: 16px; color: #fff; background-color: #007BFF; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        button:hover { background-color: #0056b3; }
+        .output { margin-top: 15px; }
+        .output textarea { resize: vertical; height: 150px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Meter Entry Formatter</h2>
+    <textarea id="entryInput" placeholder="Enter description here..." rows="4"></textarea>
+    <input type="text" id="boxNumberInput" placeholder="Enter Box Number">
+    <input type="text" id="slOfMeterInput" placeholder="Enter Sl of Meter">
+    <input type="date" id="dateInput" value="2000-01-01">
+    <button onclick="addEntry()">Add Entry</button>
+    <div class="output">
+        <textarea id="outputText" placeholder="Formatted text will appear here..." readonly></textarea>
+        <button onclick="copyText()">Copy</button>
+        <button onclick="downloadText()">Download as .txt and JSON</button>
+    </div>
+</div>
+
+<script>
+function addEntry() {
+    const entry = document.getElementById("entryInput").value.trim();
+    const boxNumber = document.getElementById("boxNumberInput").value.trim();
+    const slOfMeter = document.getElementById("slOfMeterInput").value.trim();
+    const date = document.getElementById("dateInput").value;
+
+    if (entry && boxNumber && slOfMeter && date) {
+        fetch('/add_entry', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entry, box_number: boxNumber, sl_of_meter: slOfMeter, date })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById("entryInput").value = "";
+                document.getElementById("boxNumberInput").value = "";
+                document.getElementById("slOfMeterInput").value = "";
+                updateFormattedOutput();
+            } else {
+                alert("Error adding entry: " + data.error);
+            }
+        });
+    } else {
+        alert("Please fill out all fields.");
+    }
+}
+
+function updateFormattedOutput() {
+    fetch('/get_formatted_entries')
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById("outputText").value = data.formattedText;
+    });
+}
+
+function copyText() {
+    const outputText = document.getElementById("outputText");
+    outputText.select();
+    document.execCommand("copy");
+    alert("Text copied to clipboard!");
+}
+
+function downloadText() {
+    const formattedText = document.getElementById("outputText").value;
+    if (!formattedText) {
+        alert("No formatted text available to download.");
+        return;
+    }
+    
+    const blobTxt = new Blob([formattedText], { type: "text/plain" });
+    const linkTxt = document.createElement("a");
+    linkTxt.href = URL.createObjectURL(blobTxt);
+    linkTxt.download = "formatted_entries.txt";
+    linkTxt.click();
+
+    fetch('/get_formatted_entries')
+    .then(response => response.json())
+    .then(data => {
+        const blobJson = new Blob([JSON.stringify({ entries: data.formattedText.split('\n---\n') })], { type: "application/json" });
+        const linkJson = document.createElement("a");
+        linkJson.href = URL.createObjectURL(blobJson);
+        linkJson.download = "formatted_entries.json";
+        linkJson.click();
+    });
+}
+</script>
+</body>
+</html>
